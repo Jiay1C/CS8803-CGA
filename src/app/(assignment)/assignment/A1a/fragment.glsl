@@ -3,13 +3,41 @@
 //// Assignment 1A: SDF and Ray Marching
 /////////////////////////////////////////////////////
 
+#define USE_CUSTOMIZED_SCENE // Use Customized Scene
+
+#ifdef USE_CUSTOMIZED_SCENE
+#define CALL_SDF(p) sdf2(p)
+#define LIGHT_SPEED 3.0
+#define MAX_RAYMARCHING_ITER 20
+#define BACKGROUD_COLOR vec3(0.0, 0.0, 0.0)
+#else
+#define CALL_SDF(p) sdf(p)
+#define LIGHT_SPEED 1.0
+#define MAX_RAYMARCHING_ITER 100
+#define BACKGROUD_COLOR vec3(0.9, 0.6, 0.2)
+#endif
+
+#define PI 3.1415926
+#define SPHERE_COUNT 128
+#define STAGE_COUNT 7.0
+#define SMOOTH_FACTOR 0.2
+#define TIME_RATIO 0.5
+
 precision highp float;              //// set default precision of float variables to high precision
 
 varying vec2 vUv;                   //// screen uv coordinates (varying, from vertex shader)
 uniform vec2 iResolution;           //// screen resolution (uniform, from CPU)
 uniform float iTime;                //// time elapsed (uniform, from CPU)
 
+#ifdef USE_CUSTOMIZED_SCENE
+const vec3 CAM_POS = vec3(0.0, 0.0, -3.0);
+#else
 const vec3 CAM_POS = vec3(-0.35, 1.0, -3.0);
+#endif
+
+// Forward Declaration
+float sdf(vec3 p);
+float sdf2(vec3 p);
 
 /////////////////////////////////////////////////////
 //// sdf functions
@@ -26,7 +54,7 @@ float sdfSphere(vec3 p, vec3 c, float r)
 {
     //// your implementation starts
     
-    return 0.0;
+    return distance(p, c) - r;
     
     //// your implementation ends
 }
@@ -35,8 +63,9 @@ float sdfSphere(vec3 p, vec3 c, float r)
 float sdfPlane(vec3 p, float h)
 {
     //// your implementation starts
-    
-    return 0.0;
+
+    // asumme this plane alighs with plane xz
+    return abs(p.y - h);
     
     //// your implementation ends
 }
@@ -45,8 +74,9 @@ float sdfPlane(vec3 p, float h)
 float sdfBox(vec3 p, vec3 c, vec3 b)
 {
     //// your implementation starts
-    
-    return 0.0;
+
+    vec3 q = abs(p - c) - b;
+    return length(max(q, 0.)) + min(max(q.x, max(q.y, q.z)), 0.);
     
     //// your implementation ends
 }
@@ -64,7 +94,7 @@ float sdfIntersection(float s1, float s2)
 {
     //// your implementation starts
     
-    return s1;
+    return max(s1, s2);
 
     //// your implementation ends
 }
@@ -73,7 +103,7 @@ float sdfUnion(float s1, float s2)
 {
     //// your implementation starts
     
-    return s1;
+    return min(s1, s2);
 
     //// your implementation ends
 }
@@ -82,7 +112,7 @@ float sdfSubtraction(float s1, float s2)
 {
     //// your implementation starts
     
-    return s1;
+    return max(s1, -s2);
 
     //// your implementation ends
 }
@@ -129,7 +159,27 @@ float sdf(vec3 p)
     //// calculate the sdf based on all objects in the scene
     
     //// your implementation starts
-    
+
+    float obj1sdf = sdfPlane(p, plane1_h);
+
+    float obj2sdf = sdfSphere(p, sphere1_c, sphere1_r);
+
+    float obj3sdf = sdfBox(p, box1_c, box1_b);
+
+    float obj4sdf_0 = sdfBox(p, box2_c, box2_b);
+    float obj4sdf_1 = sdfSphere(p, sphere2_c, sphere2_r);
+    float obj4sdf = sdfSubtraction(obj4sdf_0, obj4sdf_1);
+
+    float obj5sdf_0 = sdfSphere(p, sphere3_c, sphere3_r);
+    float obj5sdf_1 = sdfSphere(p, sphere4_c, sphere4_r);
+    float obj5sdf = sdfIntersection(obj5sdf_0, obj5sdf_1);
+
+    s = sdfUnion(obj1sdf,
+        sdfUnion(obj2sdf,
+        sdfUnion(obj3sdf,
+        sdfUnion(obj4sdf,
+                 obj5sdf
+        ))));
 
     //// your implementation ends
 
@@ -149,9 +199,19 @@ float sdf(vec3 p)
 float rayMarching(vec3 origin, vec3 dir)
 {
     float s = 0.0;
-    for(int i = 0; i < 100; i++)
+    for(int i = 0; i < MAX_RAYMARCHING_ITER; i++)
     {
         //// your implementation starts
+
+        float MIN_DISTANCE = 0.001;
+
+        vec3 p = origin + dir * s;
+        float sdf_value = CALL_SDF(p);
+        if (sdf_value <= MIN_DISTANCE) {
+            return s;
+        }
+
+        s += sdf_value;
 
         //// your implementation ends
     }
@@ -171,12 +231,16 @@ float rayMarching(vec3 origin, vec3 dir)
 //// normal: p - query point
 vec3 normal(vec3 p)
 {
-    float s = sdf(p);          //// sdf value in p
+    float s = CALL_SDF(p);          //// sdf value in p
     float dx = 0.01;           //// step size for finite difference
 
     //// your implementation starts
-    
-    return vec3(0.0, 0.0, 0.0);
+
+    float dfdx = (CALL_SDF(p + vec3(dx, 0, 0)) - s) / dx;
+    float dfdy = (CALL_SDF(p + vec3(0, dx, 0)) - s) / dx;
+    float dfdz = (CALL_SDF(p + vec3(0, 0, dx)) - s) / dx;
+
+    return normalize(vec3(dfdx, dfdy, dfdz));
 
     //// your implementation ends
 }
@@ -192,15 +256,27 @@ vec3 normal(vec3 p)
 //// Notice that we have implemented the default Phong shading model for you.
 /////////////////////////////////////////////////////
 
-vec3 phong_shading(vec3 p, vec3 n)
+// From https://www.shadertoy.com/view/MsS3Wc
+vec3 hsv2rgb(vec3 c )
+{
+    vec3 rgb = clamp( abs(mod(c.x*6.0+vec3(0.0,4.0,2.0),6.0)-3.0)-1.0, 0.0, 1.0 );
+
+    rgb = rgb*rgb*(3.0-2.0*rgb);
+
+    return c.z * mix( vec3(1.0), rgb, c.y);
+}
+
+vec3 phong_shading(vec3 p)
 {
     //// background
     if(p.z > 10.0){
-        return vec3(0.9, 0.6, 0.2);
+        return BACKGROUD_COLOR;
     }
 
+    vec3 n = normal(p);
+
     //// phong shading
-    vec3 lightPos = vec3(4.*sin(iTime), 4., 4.*cos(iTime));  
+    vec3 lightPos = vec3(4.*sin(iTime*LIGHT_SPEED), 4., 4.*cos(iTime*LIGHT_SPEED));
     vec3 l = normalize(lightPos - p);               
     float amb = 0.1;
     float dif = max(dot(n, l), 0.) * 0.7;
@@ -218,6 +294,35 @@ vec3 phong_shading(vec3 p, vec3 n)
 
     //// your implementation for coloring starts
 
+    vec3 center = vec3(0.0, 0.0, 0.0);
+    vec3 q = p - center;
+
+#ifdef USE_CUSTOMIZED_SCENE
+
+    float max_radius = 2.0;
+    float angle = atan(p.y, p.x) + PI + iTime;
+    float radius = length(p.xy);
+    float colorh = fract(angle * 0.5 / PI);
+    float colors = min(1.0, radius / max_radius);
+    color = hsv2rgb(vec3(colorh, colors, 1.0));
+
+#else
+    if (q.y <= 0.) {
+        color = vec3(1., 1., 0);
+    }
+    else if (q.x <= -1.5) {
+        color = vec3(1., 0., 0.);
+    }
+    else if (q.x <= -0.5) {
+        color = vec3(0., 1., 0.);
+    }
+    else if (q.x <= 0.5) {
+        color = vec3(0., 0., 1.);
+    }
+    else{
+        color = vec3(0, 1., 1.);
+    }
+#endif
 
     //// your implementation for coloring ends
 
@@ -230,12 +335,81 @@ vec3 phong_shading(vec3 p, vec3 n)
 //// Call sdf2 in your ray marching function to render your customized scene.
 /////////////////////////////////////////////////////
 
+// From https://iquilezles.org/articles/distfunctions/
+float sdfSmoothUnion( float d1, float d2)
+{
+    float h = clamp( 0.5 + 0.5*(d2-d1)/SMOOTH_FACTOR, 0.0, 1.0 );
+    return mix( d2, d1, h ) - SMOOTH_FACTOR*h*(1.0-h);
+}
+
+// From https://easings.net/#easeInOutElastic
+float easeInOutElastic(float x) {
+    const float c5 = (2.0 * PI) / 4.5;
+
+    if (x == 0.0) {
+        return 0.0;
+    }
+    if (x == 1.0) {
+        return 1.0;
+    }
+    if (x < 0.5) {
+        return - (pow(2.0, 20.0 * x - 10.0) * sin((20.0 * x - 11.125) * c5)) / 2.0;
+    }
+    return (pow(2.0, -20.0 * x + 10.0) * sin((20.0 * x - 11.125) * c5)) / 2.0 + 1.0;
+}
+
 //// sdf2: p - query point
+
+
 float sdf2(vec3 p)
 {
-    float s = 0.;
+    float s = 3.402823466e+38; // Max Float
 
     //// your implementation starts
+    float t = iTime * TIME_RATIO;
+    t = fract(t / STAGE_COUNT * 0.5) * STAGE_COUNT * 2.0;
+    t = STAGE_COUNT - abs(t - STAGE_COUNT);
+    float fract_t = easeInOutElastic(fract(t));
+
+    const vec3 c = vec3(0.0, 0.0, 0.0);
+    const float r = 1.0;
+    const float r_ratio = 0.6;
+    const float d = 1.0;
+    const float d_ratio = 0.70;
+
+    const vec3 right = vec3(1.0, 0.0, 0.0);
+    const vec3 left = vec3(-1.0, 0.0, 0.0);
+    const vec3 up = vec3(0.0, 1.0, 0.0);
+    const vec3 down = vec3(0.0, -1.0, 0.0);
+
+    for (int i = 0; i < SPHERE_COUNT; ++i){
+        int istage = int(t);
+        float stage = floor(t);
+
+        float r0 = r * pow(r_ratio, stage);
+        float r1 = r0 * r_ratio;
+        float rp = mix(r0, r1, fract_t);
+
+        vec3 c0 = c;
+        vec3 c1 = c;
+        float dp = d;
+        for (int si = 0; si <= istage; ++si){
+            c0 = c1;
+            float mode = float(si & 0x1);
+            float group = float((i >> si) & 0x1);
+            c1 += dp * mix(
+                mix(left, down, mode),
+                mix(right, up, mode),
+                group
+            );
+            dp *= d_ratio;
+        }
+
+        vec3 cp = mix(c0, c1, fract_t);
+
+        float sdf = sdfSphere(p, cp, rp);
+        s = sdfSmoothUnion(s, sdf);
+    }
 
     //// your implementation ends
 
@@ -253,8 +427,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     vec3 dir = normalize(vec3(uv.x, uv.y, 1));                              //// camera direction
     float s = rayMarching(origin, dir);                                     //// ray marching
     vec3 p = origin + dir * s;                                              //// ray-sdf intersection
-    vec3 n = normal(p);                                                     //// sdf normal
-    vec3 color = phong_shading(p, n);                                       //// phong shading
+    // Move normal calc inside phong_shading for speed up
+    vec3 color = phong_shading(p);                                       //// phong shading
     fragColor = vec4(color, 1.);                                            //// fragment color
 }
 
