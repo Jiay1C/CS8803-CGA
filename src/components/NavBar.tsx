@@ -13,7 +13,7 @@ import {
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
 } from '@/components/ui/navigation-menu';
-import { GithubIcon } from 'lucide-react';
+import { BookAIcon, GithubIcon, InfoIcon, TreesIcon } from 'lucide-react';
 import Image from 'next/image';
 
 const tutorials: { title: string; href: string; description: string }[] = [
@@ -65,18 +65,25 @@ const assignments: { title: string; href: string; description: string }[] = [
     href: '/assignment/A1b_doc',
     description: 'A1b Document: Neural Implicit Surface',
   },
-];
-
-const shaderToys: { title: string; href: string; description: string }[] = [
   {
-    title: 'Raymarching - Primitives',
-    href: 'https://www.shadertoy.com/view/Xds3zN',
-    description: 'A set of raymarched primitives by Inigo Quilez',
+    title: 'Assignment 2A Demo',
+    href: '/assignment/A2a',
+    description: 'A2a Demo: Volumetric Rendering',
   },
   {
-    title: 'Neural Stanford Bunny',
-    href: 'https://www.shadertoy.com/view/wtVyWK',
-    description: 'Neural rendering of a Stanford bunny by Blackle Mori',
+    title: 'Assignment 2A Doc',
+    href: '/assignment/A2a_doc',
+    description: 'A2a Document: Volumetric Rendering',
+  },
+  {
+    title: 'Assignment 2B Demo',
+    href: '/assignment/A2b',
+    description: 'A2b Demo: Neural Radiance Fields',
+  },
+  {
+    title: 'Assignment 2B Doc',
+    href: '/assignment/A2b_doc',
+    description: 'A2b Document: Neural Radiance Fields',
   },
 ];
 
@@ -113,22 +120,10 @@ export function NavBar() {
           </NavigationMenuContent>
         </NavigationMenuItem>
         <NavigationMenuItem>
-          <NavigationMenuTrigger>ShaderToy Classic</NavigationMenuTrigger>
-          <NavigationMenuContent>
-            <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] ">
-              {shaderToys.map((item) => (
-                <ListItem key={item.title} title={item.title} href={item.href}>
-                  {item.description}
-                </ListItem>
-              ))}
-            </ul>
-          </NavigationMenuContent>
-        </NavigationMenuItem>
-        <NavigationMenuItem>
           <Link href="https://github.com/cg-gatech/cgai" legacyBehavior passHref>
             <NavigationMenuLink className={navigationMenuTriggerStyle()}>
               <GithubIcon className="w-4 h-4 mr-2" />
-              Github page
+              Github Page
             </NavigationMenuLink>
           </Link>
         </NavigationMenuItem>
@@ -146,7 +141,46 @@ export function NavBar() {
                 width={16}
                 height={16}
               />
-              Course page
+              Canvas Page
+            </NavigationMenuLink>
+          </Link>
+        </NavigationMenuItem>
+        {/*  */}
+        <NavigationMenuItem>
+          <Link
+            href="/reading-materials"
+            legacyBehavior
+            passHref
+          >
+            <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+              <BookAIcon className='w-4 h-4 mr-2' />
+              Reading Materials
+            </NavigationMenuLink>
+          </Link>
+        </NavigationMenuItem>
+        {/*  */}
+        <NavigationMenuItem>
+          <Link
+            href="/course-information"
+            legacyBehavior
+            passHref
+          >
+            <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+              <InfoIcon className='w-4 h-4 mr-2' />
+              Course Overview
+            </NavigationMenuLink>
+          </Link>
+        </NavigationMenuItem>
+                {/*  */}
+                <NavigationMenuItem>
+          <Link
+            href="/syllabus"
+            legacyBehavior
+            passHref
+          >
+            <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+              <TreesIcon className='w-4 h-4 mr-2' />
+              Syllabus
             </NavigationMenuLink>
           </Link>
         </NavigationMenuItem>
