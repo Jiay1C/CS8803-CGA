@@ -85,6 +85,16 @@ const assignments: { title: string; href: string; description: string }[] = [
     href: '/assignment/A2b_doc',
     description: 'A2b Document: Neural Radiance Fields',
   },
+  {
+    title: 'Assignment 3 Demo',
+    href: '/assignment/A3',
+    description: 'A3 Demo: Gaussian Splatting',
+  },
+  {
+    title: 'Assignment 3 Doc',
+    href: '/assignment/A3_doc',
+    description: 'A3 Document: Gaussian Splatting',
+  },
 ];
 
 export function NavBar() {
@@ -106,7 +116,7 @@ export function NavBar() {
         <NavigationMenuItem>
           <NavigationMenuTrigger>Assignments</NavigationMenuTrigger>
           <NavigationMenuContent>
-            <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] ">
+            <ul className="grid w-[400px] gap-3 p-4 md:w-[700px] md:grid-cols-4 lg:w-[800px] ">
               {assignments.map((assignment) => (
                 <ListItem
                   key={assignment.title}
