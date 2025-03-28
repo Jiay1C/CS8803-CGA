@@ -51,8 +51,8 @@ export default function TestPage() {
   const [volumeData, setVolumeData] = useState<Uint8Array | null>(null);
   useEffect(() => {
     // Define the fixed path to the file
-    const fixedPath = '/foot_256x256x256_uint8.raw'; // Replace with the actual path
-
+    // const fixedPath = '/foot_256x256x256_uint8.raw'; // Replace with the actual path
+    const fixedPath = '/bonsai_256x256x256_uint8.raw'
     const fetchVolumeData = async () => {
       try {
         const response = await fetch(fixedPath);
